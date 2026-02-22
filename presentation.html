@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Talent Camp - Product Testing with Claude Agent</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0f0a;
+            --bg-card: #0d1a0d;
+            --bg-card-hover: #142114;
+            --green-primary: #00ff6a;
+            --green-secondary: #00d957;
+            --green-dim: #1a4d2e;
+            --green-glow: rgba(0, 255, 106, 0.3);
+            --text-primary: #e8f5e8;
+            --text-secondary: #8fb89f;
+            --text-dim: #5a7a6a;
+            --border: #1a3d2a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Animated background */
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(0, 255, 106, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 106, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 0;
+        }
+
+        .bg-glow {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--green-glow) 0%, transparent 70%);
+            filter: blur(100px);
+            z-index: 0;
+            animation: float 10s ease-in-out infinite;
+        }
+
+        .bg-glow-1 { top: -200px; left: -200px; }
+        .bg-glow-2 { bottom: -200px; right: -200px; animation-delay: -5s; }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(30px, 30px); }
+        }
+
+        /* Presentation container */
+        .presentation {
+            position: relative;
+            z-index: 1;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            z-index: 100;
+            background: rgba(13, 26, 13, 0.9);
+            padding: 12px 24px;
+            border-radius: 50px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--green-dim);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-dot:hover {
+            background: var(--green-secondary);
+            transform: scale(1.2);
+        }
+
+        .nav-dot.active {
+            background: var(--green-primary);
+            box-shadow: 0 0 20px var(--green-glow);
+        }
+
+        .nav-arrows {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            display: flex;
+            gap: 12px;
+            z-index: 100;
+        }
+
+        .nav-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--green-primary);
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-btn:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--green-dim);
+            transform: translateY(-2px);
+        }
+
+        /* Slide counter */
+        .slide-counter {
+            position: fixed;
+            top: 40px;
+            right: 40px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--text-dim);
+            z-index: 100;
+        }
+
+        .slide-counter span {
+            color: var(--green-primary);
+        }
+
+        /* Slides container */
+        .slides {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 100px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateX(100px);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(0);
+        }
+
+        .slide.prev {
+            transform: translateX(-100px);
+        }
+
+        .slide-content {
+            max-width: 1400px;
+            width: 100%;
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 4.5rem;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, var(--green-primary) 0%, var(--green-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        h2 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 40px;
+            color: var(--text-primary);
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--green-primary);
+        }
+
+        p {
+            font-size: 1.25rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        .subtitle {
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            margin-bottom: 48px;
+        }
+
+        /* Code blocks */
+        .code-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        .code-block .keyword { color: #ff79c6; }
+        .code-block .string { color: var(--green-primary); }
+        .code-block .comment { color: var(--text-dim); }
+        .code-block .function { color: #50fa7b; }
+        .code-block .number { color: #bd93f9; }
+
+        /* Cards */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-top: 40px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 32px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--green-dim);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--green-dim) 0%, var(--bg-card) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            margin-bottom: 12px;
+        }
+
+        .card p {
+            font-size: 1rem;
+            margin-bottom: 0;
+        }
+
+        /* Stats */
+        .stats {
+            display: flex;
+            gap: 48px;
+            margin-top: 48px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 4rem;
+            font-weight: 900;
+            color: var(--green-primary);
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            color: var(--text-dim);
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Architecture diagram */
+        .architecture {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        .arch-box {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 24px 32px;
+            text-align: center;
+            min-width: 180px;
+            position: relative;
+        }
+
+        .arch-box.highlight {
+            border-color: var(--green-primary);
+            box-shadow: 0 0 30px var(--green-glow);
+        }
+
+        .arch-box h4 {
+            font-size: 1.1rem;
+            color: var(--green-primary);
+            margin-bottom: 8px;
+        }
+
+        .arch-box p {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            margin: 0;
+        }
+
+        .arch-arrow {
+            font-size: 2rem;
+            color: var(--green-dim);
+        }
+
+        /* Score bars */
+        .score-bars {
+            margin-top: 40px;
+        }
+
+        .score-bar {
+            margin-bottom: 24px;
+        }
+
+        .score-bar-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .score-bar-label {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+        }
+
+        .score-bar-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            color: var(--green-primary);
+        }
+
+        .score-bar-track {
+            height: 12px;
+            background: var(--bg-card);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .score-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--green-dim) 0%, var(--green-primary) 100%);
+            border-radius: 6px;
+            transition: width 1s ease;
+        }
+
+        /* Feature list */
+        .feature-list {
+            list-style: none;
+            margin-top: 32px;
+        }
+
+        .feature-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--green-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: var(--green-primary);
+        }
+
+        .feature-text h4 {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .feature-text p {
+            font-size: 0.95rem;
+            color: var(--text-dim);
+            margin: 0;
+        }
+
+        /* Two columns */
+        .two-cols {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: start;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        .badge-green {
+            background: var(--green-dim);
+            color: var(--green-primary);
+        }
+
+        .badge-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        /* Flow diagram */
+        .flow {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            margin-top: 40px;
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .flow-number {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--green-dim);
+            color: var(--green-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .flow-content {
+            flex: 1;
+            padding: 20px 0;
+        }
+
+        .flow-content h4 {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .flow-content p {
+            font-size: 0.95rem;
+            color: var(--text-dim);
+            margin: 0;
+        }
+
+        .flow-line {
+            width: 2px;
+            height: 30px;
+            background: var(--green-dim);
+            margin-left: 23px;
+        }
+
+        /* Logos */
+        .tech-logos {
+            display: flex;
+            gap: 40px;
+            margin-top: 48px;
+            align-items: center;
+        }
+
+        .tech-logo {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .tech-logo-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+        }
+
+        .tech-logo span {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+        }
+
+        /* Title slide special */
+        .title-slide {
+            text-align: center;
+        }
+
+        .title-slide h1 {
+            font-size: 5rem;
+            margin-bottom: 16px;
+        }
+
+        .title-slide .subtitle {
+            font-size: 1.75rem;
+            margin-bottom: 60px;
+        }
+
+        .title-slide .badge {
+            font-size: 1rem;
+            padding: 10px 20px;
+        }
+
+        /* Comparison table */
+        .comparison {
+            width: 100%;
+            margin-top: 40px;
+            border-collapse: collapse;
+        }
+
+        .comparison th, .comparison td {
+            padding: 16px 24px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .comparison th {
+            color: var(--text-dim);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .comparison td {
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        .comparison tr:hover td {
+            background: var(--bg-card);
+        }
+
+        /* Final slide */
+        .final-slide {
+            text-align: center;
+        }
+
+        .final-slide h1 {
+            font-size: 4rem;
+        }
+
+        .final-stats {
+            display: flex;
+            justify-content: center;
+            gap: 80px;
+            margin-top: 60px;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide.active .animate {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .slide.active .animate:nth-child(1) { animation-delay: 0.1s; }
+        .slide.active .animate:nth-child(2) { animation-delay: 0.2s; }
+        .slide.active .animate:nth-child(3) { animation-delay: 0.3s; }
+        .slide.active .animate:nth-child(4) { animation-delay: 0.4s; }
+        .slide.active .animate:nth-child(5) { animation-delay: 0.5s; }
+        .slide.active .animate:nth-child(6) { animation-delay: 0.6s; }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .slide {
+                padding: 40px 60px;
+            }
+            h1 { font-size: 3rem; }
+            h2 { font-size: 2.2rem; }
+            .two-cols { grid-template-columns: 1fr; gap: 40px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <div class="presentation">
+        <div class="slide-counter">
+            <span id="current">01</span> / <span id="total">10</span>
+        </div>
+
+        <div class="slides">
+            <!-- Slide 1: Title -->
+            <slide class="slide active" data-slide="1">
+                <div class="slide-content title-slide">
+                    <h1>Product Testing</h1>
+                    <p class="subtitle">AI Talent Camp Dashboard</p>
+                    <div>
+                        <span class="badge badge-green">Claude Agent SDK</span>
+                        <span class="badge badge-green">Playwright MCP</span>
+                        <span class="badge badge-outline">Automated QA</span>
+                    </div>
+                    <div class="tech-logos" style="justify-content: center; margin-top: 80px;">
+                        <div class="tech-logo">
+                            <div class="tech-logo-icon">🤖</div>
+                            <span>Claude AI</span>
+                        </div>
+                        <div class="tech-logo">
+                            <div class="tech-logo-icon">🎭</div>
+                            <span>Playwright</span>
+                        </div>
+                        <div class="tech-logo">
+                            <div class="tech-logo-icon">📊</div>
+                            <span>Analytics</span>
+                        </div>
+                    </div>
+                </div>
+            </slide>
+
+            <!-- Slide 2: Problem -->
+            <slide class="slide" data-slide="2">
+                <div class="slide-content">
+                    <h2>Проблема</h2>
+                    <p class="subtitle">Как оценить 17 команд объективно и быстро?</p>
+
+                    <div class="cards">
+                        <div class="card animate">
+                            <div class="card-icon">⏱️</div>
+                            <h3>Время</h3>
+                            <p>Ручное тестирование каждого продукта занимает часы</p>
+                        </div>
+                        <div class="card animate">
+                            <div class="card-icon">🎯</div>
+                            <h3>Объективность</h3>
+                            <p>Разные тестировщики — разные критерии оценки</p>
+                        </div>
+                        <div class="card animate">
+                            <div class="card-icon">📝</div>
+                            <h3>Документация</h3>
+                            <p>Нужны подробные отчёты с доказательствами</p>
+                        </div>
+                        <div class="card animate">
+                            <div class="card-icon">🔄</div>
+                            <h3>Повторяемость</h3>
+                            <p>Тесты должны запускаться регулярно</p>
+                        </div>
+                    </div>
+                </div>
+            </slide>
+
+            <!-- Slide 3: Solution -->
+            <slide class="slide" data-slide="3">
+                <div class="slide-content">
+                    <h2>Решение</h2>
+                    <p class="subtitle">Claude Agent + Playwright = Автоматический QA</p>
+
+                    <div class="architecture">
+                        <div class="arch-box">
+                            <h4>Dashboard</h4>
+                            <p>FastAPI + PostgreSQL</p>
+                        </div>
+                        <span class="arch-arrow">→</span>
+                        <div class="arch-box highlight">
+                            <h4>Claude Agent SDK</h4>
+                            <p>AI-driven testing</p>
+                        </div>
+                        <span class="arch-arrow">→</span>
+                        <div class="arch-box">
+                            <h4>Playwright MCP</h4>
+                            <p>Browser automation</p>
+                        </div>
+                        <span class="arch-arrow">→</span>
+                        <div class="arch-box">
+                            <h4>Reports</h4>
+                            <p>PDF / DOCX</p>
+                        </div>
+                    </div>
+
+                    <div class="code-block" style="margin-top: 48px;">
+                        <span class="comment"># Claude сам управляет браузером через MCP</span><br>
+                        <span class="keyword">async with</span> <span class="function">agent_client</span>.<span class="function">run</span>(<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;model=<span class="string">"claude-sonnet-4-20250514"</span>,<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;mcp_servers=[<span class="string">"playwright"</span>],<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;prompt=<span class="string">"Исследуй продукт и оцени его"</span><br>
+                        ) <span class="keyword">as</span> result:<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;evaluation = result.content
+                    </div>
+                </div>
+            </slide>
+
+            <!-- Slide 4: Two Testing Modes -->
+            <slide class="slide" data-slide="4">
+                <div class="slide-content">
+                    <h2>Два режима тестирования</h2>
+
+                    <div class="two-cols" style="margin-top: 40px;">
+                        <div class="card animate">
+                            <div class="card-icon">🔍</div>
+                            <h3>Blind Mode</h3>
+                            <p style="font-size: 1.1rem; margin-bottom: 24px;">Claude исследует продукт <strong>без контекста</strong>, как новый пользователь</p>
+
+                            <ul class="feature-list">
+                                <li>
+                                    <span class="feature-icon">✓</span>
+                                    <div class="feature-text">
+                                        <h4>Первое впечатление</h4>
+                                        <p>Насколько понятен интерфейс?</p>
+                                    </div>
+                                </li>
+                                <li>
+                                    <span class="feature-icon">✓</span>
+                                    <div class="feature-text">
+                                        <h4>Discoverability</h4>
+                                        <p>Легко ли найти функции?</p>
+                                    </div>
+                                </li>
+                                <li>
+                                    <span class="feature-icon">✓</span>
+                                    <div class="feature-text">
+                                        <h4>UX Issues</h4>
+                                        <p>Проблемы навигации и дизайна</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="card animate">
+                            <div class="card-icon">📋</div>
+                            <h3>Contextual Mode</h3>
+                            <p style="font-size: 1.1rem; margin-bottom: 24px;">Claude читает README и <strong>проверяет заявленные функции</strong></p>
+
+                            <ul class="feature-list">
+                                <li>
+                                    <span class="feature-icon">✓</span>
+                                    <div class="feature-text">
+                                        <h4>MVP Verification</h4>
+                                        <p>Работают ли документированные фичи?</p>
+                                    </div>
+                                </li>
+                                <li>
+                                    <span class="feature-icon">✓</span>
+                                    <div class="feature-text">
+                                        <h4>Feature Parity</h4>
+                                        <p>Соответствует ли продукт описанию?</p>
+                                    </div>
+                                </li>
+                                <li>
+                                    <span class="feature-icon">✓</span>
+                                    <div class="feature-text">
+                                        <h4>Bug Detection</h4>
+                                        <p>Ошибки в конкретных сценариях</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </slide>
+
+            <!-- Slide 5: Scoring System -->
+            <slide class="slide" data-slide="5">
+                <div class="slide-content">
+                    <h2>Система оценки</h2>
+                    <p class="subtitle">Три измерения качества продукта</p>
+
+                    <div class="score-bars">
+                        <div class="score-bar animate">
+                            <div class="score-bar-header">
+                                <span class="score-bar-label">🎨 UX / User Experience</span>
+                                <span class="score-bar-value">40%</span>
+                            </div>
+                            <div class="score-bar-track">
+                                <div class="score-bar-fill" style="width: 40%;"></div>
+                            </div>
+                            <p style="font-size: 0.9rem; margin-top: 8px;">Навигация, дизайн, отзывчивость, читаемость, обработка ошибок</p>
+                        </div>
+
+                        <div class="score-bar animate">
+                            <div class="score-bar-header">
+                                <span class="score-bar-label">⚙️ Functionality</span>
+                                <span class="score-bar-value">40%</span>
+                            </div>
+                            <div class="score-bar-track">
+                                <div class="score-bar-fill" style="width: 40%;"></div>
+                            </div>
+                            <p style="font-size: 0.9rem; margin-top: 8px;">Работа фич, соответствие документации, стабильность, edge cases</p>
+                        </div>
+
+                        <div class="score-bar animate">
+                            <div class="score-bar-header">
+                                <span class="score-bar-label">⚡ Performance</span>
+                                <span class="score-bar-value">20%</span>
+                            </div>
+                            <div class="score-bar-track">
+                                <div class="score-bar-fill" style="width: 20%;"></div>
+                            </div>
+                            <p style="font-size: 0.9rem; margin-top: 8px;">Время загрузки < 3с, отклик < 500мс, стабильность, ресурсы</p>
+                        </div>
+                    </div>
+
+                    <div class="code-block" style="margin-top: 32px;">
+                        <span class="function">overall_score</span> = ux * <span class="number">0.4</span> + functionality * <span class="number">0.4</span> + performance * <span class="number">0.2</span>
+                    </div>
+                </div>
+            </slide>
+
+            <!-- Slide 6: How Claude Tests -->
+            <slide class="slide" data-slide="6">
+                <div class="slide-content">
+                    <h2>Как Claude тестирует</h2>
+
+                    <div class="two-cols">
+                        <div>
+                            <div class="flow">
+                                <div class="flow-step animate">
+                                    <div class="flow-number">1</div>
+                                    <div class="flow-content">
+                                        <h4>Открывает URL продукта</h4>
+                                        <p>Playwright MCP запускает браузер</p>
+                                    </div>
+                                </div>
+                                <div class="flow-line"></div>
+                                <div class="flow-step animate">
+                                    <div class="flow-number">2</div>
+                                    <div class="flow-content">
+                                        <h4>Делает скриншот</h4>
+                                        <p>Анализирует визуальное состояние</p>
+                                    </div>
+                                </div>
+                                <div class="flow-line"></div>
+                                <div class="flow-step animate">
+                                    <div class="flow-number">3</div>
+                                    <div class="flow-content">
+                                        <h4>Исследует интерфейс</h4>
+                                        <p>Кликает, вводит текст, навигирует</p>
+                                    </div>
+                                </div>
+                                <div class="flow-line"></div>
+                                <div class="flow-step animate">
+                                    <div class="flow-number">4</div>
+                                    <div class="flow-content">
+                                        <h4>Фиксирует находки</h4>
+                                        <p>Баги, проблемы UX, фичи</p>
+                                    </div>
+                                </div>
+                                <div class="flow-line"></div>
+                                <div class="flow-step animate">
+                                    <div class="flow-number">5</div>
+                                    <div class="flow-content">
+                                        <h4>Выставляет оценки</h4>
+                                        <p>JSON с scores и reasoning</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="code-block animate" style="font-size: 0.85rem;">
+<span class="comment">// Claude's browser actions via MCP</span>
+{
+  <span class="string">"action"</span>: <span class="string">"browser_snapshot"</span>,
+  <span class="string">"result"</span>: <span class="string">"[ref1] button 'Login'"</span>
+}
+
+{
+  <span class="string">"action"</span>: <span class="string">"browser_click"</span>,
+  <span class="string">"ref"</span>: <span class="string">"ref1"</span>
+}
+
+{
+  <span class="string">"action"</span>: <span class="string">"browser_type"</span>,
+  <span class="string">"ref"</span>: <span class="string">"ref2"</span>,
+  <span class="string">"text"</span>: <span class="string">"test@example.com"</span>
+}
+
+{
+  <span class="string">"action"</span>: <span class="string">"browser_take_screenshot"</span>,
+  <span class="string">"filename"</span>: <span class="string">"login_form.jpeg"</span>
+}
+                        </div>
+                    </div>
+                </div>
+            </slide>
+
+            <!-- Slide 7: Findings -->
+            <slide class="slide" data-slide="7">
+                <div class="slide-content">
+                    <h2>Что находит Claude</h2>
+
+                    <table class="comparison">
+                        <thead>
+                            <tr>
+                                <th>Тип</th>
+                                <th>Severity</th>
+                                <th>Пример</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="animate">
+                                <td><span class="badge badge-green">Feature</span></td>
+                                <td>—</td>
+                                <td>Найдена функция поиска с фильтрами</td>
+                            </tr>
+                            <tr class="animate">
+                                <td><span class="badge" style="background: #4d1a1a; color: #ff6b6b;">Bug</span></td>
+                                <td>High</td>
+                                <td>Кнопка "Отправить" не работает на мобильных</td>
+                            </tr>
+                            <tr class="animate">
+                                <td><span class="badge" style="background: #4d3a1a; color: #ffc107;">UX Issue</span></td>
+                                <td>Medium</td>
+                                <td>Нет индикатора загрузки при запросах</td>
+                            </tr>
+                            <tr class="animate">
+                                <td><span class="badge" style="background: #4d1a1a; color: #ff6b6b;">Error</span></td>
+                                <td>High</td>
+                                <td>500 ошибка при отправке формы</td>
+                            </tr>
+                            <tr class="animate">
+                                <td><span class="badge" style="background: #4d3a1a; color: #ffc107;">UX Issue</span></td>
+                                <td>Low</td>
+                                <td>Мелкий текст трудно читать</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="stats" style="margin-top: 48px; justify-content: center;">
+                        <div class="stat animate">
+                            <div class="stat-value">12-15</div>
+                            <div class="stat-label">действий / тест</div>
+                        </div>
+                        <div class="stat animate">
+                            <div class="stat-value">3-4</div>
+                            <div class="stat-label">скриншота</div>
+                        </div>
+                        <div class="stat animate">
+                            <div class="stat-value">~2</div>
+                            <div class="stat-label">минуты / команда</div>
+                        </div>
+                    </div>
+                </div>
+            </slide>
+
+            <!-- Slide 8: Reports -->
+            <slide class="slide" data-slide="8">
+                <div class="slide-content">
+                    <h2>Отчёты</h2>
+                    <p class="subtitle">PDF и DOCX с полной информацией</p>
+
+                    <div class="two-cols" style="margin-top: 40px;">
+                        <div class="card animate">
+                            <div class="card-icon">📄</div>
+                            <h3>PDF Report</h3>
+                            <p>Reportlab + кириллица (DejaVuSans)</p>
+                            <ul class="feature-list" style="margin-top: 16px;">
+                                <li>
+                                    <span class="feature-icon">✓</span>
+                                    <div class="feature-text">
+                                        <p>Общая оценка с визуализацией</p>
+                                    </div>
+                                </li>
+                                <li>
+                                    <span class="feature-icon">✓</span>
+                                    <div class="feature-text">
+                                        <p>Breakdown по измерениям</p>
+                                    </div>
+                                </li>
+                                <li>
+                                    <span class="feature-icon">✓</span>
+                                    <div class="feature-text">
+                                        <p>Список findings с severity</p>
+                                    </div>
+                                </li>
+                                <li>
+                                    <span class="feature-icon">✓</span>
+                                    <div class="feature-text">
+                                        <p>Скриншоты в приложении</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="card animate">
+                            <div class="card-icon">📝</div>
+                            <h3>DOCX Report</h3>
+                            <p>python-docx + таблицы + изображения</p>
+                            <ul class="feature-list" style="margin-top: 16px;">
+                                <li>
+                                    <span class="feature-icon">✓</span>
+                                    <div class="feature-text">
+                                        <p>Редактируемый формат</p>
+                                    </div>
+                                </li>
+                                <li>
+                                    <span class="feature-icon">✓</span>
+                                    <div class="feature-text">
+                                        <p>Findings grouped by severity</p>
+                                    </div>
+                                </li>
+                                <li>
+                                    <span class="feature-icon">✓</span>
+                                    <div class="feature-text">
+                                        <p>Цветовая кодировка оценок</p>
+                                    </div>
+                                </li>
+                                <li>
+                                    <span class="feature-icon">✓</span>
+                                    <div class="feature-text">
+                                        <p>До 10 скриншотов inline</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="code-block" style="margin-top: 32px;">
+                        GET /api/team/{team_id}/product-tests/{test_id}/<span class="string">report.pdf</span><br>
+                        GET /api/team/{team_id}/product-tests/{test_id}/<span class="string">report.docx</span>
+                    </div>
+                </div>
+            </slide>
+
+            <!-- Slide 9: Integration -->
+            <slide class="slide" data-slide="9">
+                <div class="slide-content">
+                    <h2>Интеграция</h2>
+
+                    <div class="cards">
+                        <div class="card animate">
+                            <div class="card-icon">⏰</div>
+                            <h3>Scheduled</h3>
+                            <p>Автозапуск каждый день в 03:00 MSK для команд с green deploy status</p>
+                        </div>
+                        <div class="card animate">
+                            <div class="card-icon">🔧</div>
+                            <h3>CLI</h3>
+                            <p>Ручной запуск через <code>python -m app.cli test-product --team team01</code></p>
+                        </div>
+                        <div class="card animate">
+                            <div class="card-icon">🌐</div>
+                            <h3>API</h3>
+                            <p>POST endpoint для запуска тестов из интерфейса</p>
+                        </div>
+                        <div class="card animate">
+                            <div class="card-icon">📱</div>
+                            <h3>Telegram</h3>
+                            <p>Опциональное тестирование Telegram-ботов через Telethon</p>
+                        </div>
+                    </div>
+
+                    <div class="code-block" style="margin-top: 32px;">
+<span class="comment"># CLI Usage</span>
+docker compose exec api python -m app.cli test-product \
+    --team team01 \
+    --mode <span class="string">both</span>  <span class="comment"># blind | contextual | both</span>
+
+<span class="comment"># API Usage</span>
+curl -X POST /api/team/team01/product-tests/run \
+    -d <span class="string">'{"mode": "both"}'</span>
+                    </div>
+                </div>
+            </slide>
+
+            <!-- Slide 10: Results -->
+            <slide class="slide" data-slide="10">
+                <div class="slide-content final-slide">
+                    <h1>Результаты</h1>
+                    <p class="subtitle">Автоматизация тестирования 17 команд</p>
+
+                    <div class="final-stats">
+                        <div class="stat animate">
+                            <div class="stat-value">17</div>
+                            <div class="stat-label">команд</div>
+                        </div>
+                        <div class="stat animate">
+                            <div class="stat-value">100%</div>
+                            <div class="stat-label">автоматизация</div>
+                        </div>
+                        <div class="stat animate">
+                            <div class="stat-value">3</div>
+                            <div class="stat-label">измерения</div>
+                        </div>
+                        <div class="stat animate">
+                            <div class="stat-value">2</div>
+                            <div class="stat-label">формата отчётов</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 60px;">
+                        <span class="badge badge-green" style="font-size: 1.1rem; padding: 12px 24px;">Claude Agent SDK</span>
+                        <span class="badge badge-green" style="font-size: 1.1rem; padding: 12px 24px;">Playwright MCP</span>
+                        <span class="badge badge-green" style="font-size: 1.1rem; padding: 12px 24px;">FastAPI</span>
+                        <span class="badge badge-green" style="font-size: 1.1rem; padding: 12px 24px;">PostgreSQL</span>
+                    </div>
+
+                    <p style="margin-top: 48px; font-size: 1.5rem; color: var(--green-primary);">
+                        AI-powered QA для соревнований
+                    </p>
+                </div>
+            </slide>
+        </div>
+
+        <nav class="nav">
+            <div class="nav-dot active" data-slide="1"></div>
+            <div class="nav-dot" data-slide="2"></div>
+            <div class="nav-dot" data-slide="3"></div>
+            <div class="nav-dot" data-slide="4"></div>
+            <div class="nav-dot" data-slide="5"></div>
+            <div class="nav-dot" data-slide="6"></div>
+            <div class="nav-dot" data-slide="7"></div>
+            <div class="nav-dot" data-slide="8"></div>
+            <div class="nav-dot" data-slide="9"></div>
+            <div class="nav-dot" data-slide="10"></div>
+        </nav>
+
+        <div class="nav-arrows">
+            <button class="nav-btn" id="prev">←</button>
+            <button class="nav-btn" id="next">→</button>
+        </div>
+    </div>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const dots = document.querySelectorAll('.nav-dot');
+        const prevBtn = document.getElementById('prev');
+        const nextBtn = document.getElementById('next');
+        const currentSpan = document.getElementById('current');
+        const totalSpan = document.getElementById('total');
+
+        let currentSlide = 1;
+        const totalSlides = slides.length;
+
+        totalSpan.textContent = String(totalSlides).padStart(2, '0');
+
+        function goToSlide(n) {
+            // Remove all classes
+            slides.forEach(slide => {
+                slide.classList.remove('active', 'prev');
+            });
+            dots.forEach(dot => dot.classList.remove('active'));
+
+            // Mark previous slides
+            slides.forEach((slide, index) => {
+                if (index + 1 < n) {
+                    slide.classList.add('prev');
+                }
+            });
+
+            // Activate current slide
+            const current = document.querySelector(`[data-slide="${n}"]`);
+            current.classList.add('active');
+            dots[n - 1].classList.add('active');
+
+            currentSlide = n;
+            currentSpan.textContent = String(n).padStart(2, '0');
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides) {
+                goToSlide(currentSlide + 1);
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 1) {
+                goToSlide(currentSlide - 1);
+            }
+        }
+
+        // Event listeners
+        nextBtn.addEventListener('click', nextSlide);
+        prevBtn.addEventListener('click', prevSlide);
+
+        dots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                goToSlide(parseInt(dot.dataset.slide));
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevSlide();
+            }
+        });
+
+        // Touch support
+        let touchStartX = 0;
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+        });
+
+        document.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const diff = touchStartX - touchEndX;
+
+            if (Math.abs(diff) > 50) {
+                if (diff > 0) {
+                    nextSlide();
+                } else {
+                    prevSlide();
+                }
+            }
+        });
+
+        // Initialize
+        goToSlide(1);
+    </script>
+</body>
+</html>
